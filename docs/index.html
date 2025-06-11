@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Epidemico Side Effect Finder</title>
+  <style>
+    body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { cursor: pointer; background-color: #f2f2f2; }
+
+    /* arrow like icon for sorting */
+    .sort-icon {
+      font-size: 0.8em;
+      margin-left: 5px;
+    }
+    /* Make only the thumbs catch pointer events when stacked */
+    input[type="range"] {
+      pointer-events: none;
+    }
+
+    /* Removes the default range slider stuff for each browser */
+    /* WebKit browsers */
+    input[type="range"]::-webkit-slider-thumb {
+      pointer-events: auto;
+    }
+    /* Mozilla browsers */
+    input[type="range"]::-moz-range-thumb {
+      pointer-events: auto;
+    }
+    /* Internet Explorer / Edge */
+    input[type="range"]::-ms-thumb {
+      pointer-events: auto;
+    }
+
+    /* Numbers for slider */
+    #rankLabels {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      padding: 2px 0 0;
+      box-sizing: border-box;
+      position: relative;
+    }
+    #rankLabels span {
+      flex: 1;
+      text-align: center;
+    }
+
+    /* adjusting #1 to line up  */
+    #rankLabels span:first-child {
+      margin-left: -81px;
+    }
+
+    /*  adjusting #10 to lign up */
+    #rankLabels span:last-child {
+      margin-right: -85px;
+    }
+  </style>
+</head>
+<body>
+
+<header style="background-color: #333; color: white; padding: 10px 20px;">
+  <h1 style="margin: 0;">Epidemico Side Effect Finder</h1>
+</header>
+
+<!-- intro text  -->
+<p style="padding: 10px 20px">
+  View the most frequent side effects in "Epidemico's" Pharmaceutical Line.
+  (Drug data sourced from <a href="https://www.kaggle.com/datasets/shudhanshusingh/250k-medicines-usage-side-effects-and-substitutes?resource=download" target="_blank">Kaggle</a>.)
+  <br><br>
+  The data linked above included side effect data for 250,000 different drugs, which was processed to count the total number for
+  each side effect, and to divide it into 10 quantiles for the 1-10 scale.
+
+</p>
+<!-- Slider for filtering by the occurance   -->
+<div style="padding: 10px 20px;">
+  <label><strong>Filter by Rank:</strong></label><br>
+    <div style="position: relative; height: 20px;">
+      <div id="gradientBar" style="position: absolute; top: 7px; height: 6px; background: transparent; z-index: 4; pointer-events: none;"></div>
+      <input type="range" id="minRank" min="1" max="10" value="1"
+             style="position: absolute; width: 100%; top: 0; left: 0; z-index: 4; background: transparent; appearance: none;">
+      <input type="range" id="maxRank" min="1" max="10" value="10"
+             style="position: absolute; width: 100%; top: 0; left: 0; z-index: 5; background: transparent; appearance: none;">
+  </div>
+  <div id="rankLabels"></div>
+</div>
+
+<table id="effectTable">
+  <thead>
+<tr>
+  <th data-sort="desc">Occurrences Rank <span class="sort-icon">▼</span></th>
+  <th data-sort="none">Side Effect Name <span class="sort-icon"></span></th>
+  <th data-sort="none">Raw Occurrences <span class="sort-icon"></span></th>
+</tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<script>
+  // Fetch and parse CSV
+  let data = [];
+  fetch("data/side_effect_counts.csv")
+    .then(response => response.text())
+    .then(csv => {
+      const rows = csv.trim().split('\n').slice(1); // Skip header
+      data = rows.map(row => {
+        const [rank, effect, count] = row.split(',');
+        return {
+          rank: parseInt(rank, 10),
+          effect,
+          count: parseInt(count, 10)
+        };
+      });
+      data.sort((a, b) => b.rank - a.rank);
+
+      // color scale for the 10 levels of freq
+      const colorScale = [
+        '#2ecc71', '#58d68d', '#82e0aa', '#b2fab4', '#ffeaa7',
+        '#f9c784', '#f5b041', '#eb984e', '#e74c3c', '#c0392b'
+      ];
+
+      // for the multiselect slider
+      const rankLabelsContainer = document.getElementById("rankLabels");
+      for (let i = 1; i <= 10; i++) {
+        const span = document.createElement("span");
+        span.textContent = i;
+        span.style.color = colorScale[i - 1];
+        span.style.fontWeight = "bold";
+        rankLabelsContainer.appendChild(span);
+      }
+
+      const minSlider = document.getElementById("minRank");
+      const maxSlider = document.getElementById("maxRank");
+
+      function updateAccentColors() {
+        let minVal = parseInt(minSlider.value, 10);
+        let maxVal = parseInt(maxSlider.value, 10);
+
+        // Clamp to valid range
+        minVal = Math.max(1, Math.min(10, minVal));
+        maxVal = Math.max(1, Math.min(10, maxVal));
+
+        // Apply accent color to each handle
+        minSlider.style.accentColor = colorScale[minVal - 1];
+        maxSlider.style.accentColor = colorScale[maxVal - 1];
+
+        // Calculate percent positions
+        const percentPerStep = 100 / 9;
+        const left = (Math.min(minVal, maxVal) - 1) * percentPerStep +.25;
+        const width = Math.abs(maxVal - minVal) * percentPerStep -.2;
+
+        // Gradient for selected range
+        const steps = colorScale.slice(Math.min(minVal, maxVal) - 1, Math.max(minVal, maxVal));
+        const gradient = `linear-gradient(to right, ${steps.join(', ')})`;
+
+        const bar = document.getElementById("gradientBar");
+        bar.style.left = `${left}%`;
+        bar.style.width = `${width}%`;
+        bar.style.background = gradient;
+      }
+
+      function getSelectedRankRange() {
+        const minRank = parseInt(minSlider.value, 10);
+        const maxRank = parseInt(maxSlider.value, 10);
+        return [Math.min(minRank, maxRank), Math.max(minRank, maxRank)];
+      }
+
+      // adjusts for the filter
+      function updateTable(data) {
+        const [min, max] = getSelectedRankRange();
+        const filtered = data.filter(row => row.rank >= min && row.rank <= max);
+        renderTable(filtered);
+      }
+
+      // checking for slider changes
+      minSlider.addEventListener("input", () => {
+        let minVal = parseInt(minSlider.value, 10);
+        let maxVal = parseInt(maxSlider.value, 10);
+        if (minVal >= maxVal) {
+          minVal = maxVal - 1;
+          minSlider.value = minVal;
+        }
+        updateAccentColors();
+        updateTable(data);
+      });
+
+      maxSlider.addEventListener("input", () => {
+        let minVal = parseInt(minSlider.value, 10);
+        let maxVal = parseInt(maxSlider.value, 10);
+        if (maxVal <= minVal) {
+          maxVal = minVal + 1;
+          maxSlider.value = maxVal;
+        }
+        updateAccentColors();
+        updateTable(data);
+      });
+
+      updateAccentColors();
+      renderTable(data);
+
+      // Add click handlers for sorting with icon toggling
+      document.querySelectorAll("th").forEach((th, i) => {
+        th.addEventListener("click", () => {
+          const key = i === 0 ? "rank" : (i === 1 ? "effect" : "count");
+          const currentDirection = th.getAttribute("data-sort");
+          const newDirection = currentDirection === "asc" ? "desc" : "asc";
+          const sorted = [...data].sort((a, b) => {
+            return newDirection === "asc"
+              ? (a[key] > b[key] ? 1 : -1)
+              : (a[key] < b[key] ? 1 : -1);
+          });
+
+          // Reset all icons
+          document.querySelectorAll(".sort-icon").forEach(icon => icon.textContent = '');
+          th.querySelector(".sort-icon").textContent = newDirection === "asc" ? '▲' : '▼';
+
+          th.setAttribute("data-sort", newDirection);
+          updateTable(sorted);
+        });
+      });
+    });
+
+  function renderTable(data) {
+    const tbody = document.querySelector("#effectTable tbody");
+    tbody.innerHTML = "";
+    data.forEach(row => {
+      const colorScale = [
+        '#2ecc71', '#58d68d', '#82e0aa', '#b2fab4', '#ffeaa7',
+        '#f9c784', '#f5b041', '#eb984e', '#e74c3c', '#c0392b'
+      ];
+      const color = colorScale[row.rank - 1];
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td style="background-color: ${color}">${row.rank}</td><td>${row.effect}</td><td>${row.count}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+</script>
+
+</body>
+</html>
