@@ -1,0 +1,127 @@
+/* ###### Layout Header and Basic Site Styles ###### */
+.site-header {
+    background-color: #333;
+    color: white;
+    padding: 10px 20px;
+}
+
+body {
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+#introText p {
+    padding: 10px 20px
+}
+
+
+/* ###### Table Styles ###### */
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+th, td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: left;
+}
+
+th {
+    cursor: pointer;
+    background-color: #f2f2f2;
+}
+
+/* arrow like icon for sorting */
+.sort-icon {
+    font-size: 0.8em;
+    margin-left: 5px;
+}
+
+/* ###### Disable Default Slider Styles ###### */
+
+/* Make only the thumbs catch pointer events when stacked */
+input[type="range"] {
+    pointer-events: none;
+}
+
+/* Removes the default range slider stuff for each browser */
+/* WebKit browsers */
+input[type="range"]::-webkit-slider-thumb {
+    pointer-events: auto;
+}
+
+/* Mozilla browsers */
+input[type="range"]::-moz-range-thumb {
+    pointer-events: auto;
+}
+
+/* Internet Explorer / Edge */
+input[type="range"]::-ms-thumb {
+    pointer-events: auto;
+}
+
+/* ###### Slider New Styles ###### */
+
+/* Numbers for slider */
+#rankLabels {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    padding: 2px 0 0;
+    box-sizing: border-box;
+    position: relative;
+}
+
+#rankLabels span {
+    flex: 1;
+    text-align: center;
+}
+
+/* adjusting #1 to line up  */
+#rankLabels span:first-child {
+    margin-left: -81px;
+}
+
+/*  adjusting #10 to lign up */
+#rankLabels span:last-child {
+    margin-right: -85px;
+}
+
+#FilterContainer {
+    padding: 10px 20px;
+}
+
+#BarRange {
+    position: relative;
+    height: 20px;
+}
+
+#gradientBar {
+    position: absolute;
+    top: 7px;
+    height: 6px;
+    background: transparent;
+    z-index: 4;
+    pointer-events: none;
+}
+
+#minRank {
+    position: absolute;
+    width: 100%;
+    top: 0;
+    left: 0;
+    z-index: 4;
+    background: transparent;
+    appearance: none;
+}
+
+#maxRank {
+    position: absolute;
+    width: 100%;
+    top: 0;
+    left: 0;
+    z-index: 5;
+    background: transparent;
+    appearance: none;
+}
